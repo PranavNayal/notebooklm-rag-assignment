@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notebook RAG</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace" aria-label="Document chat workspace">
+        <aside class="sidebar">
+          <div>
+            <p class="eyebrow">Assignment 03</p>
+            <h1>Notebook RAG</h1>
+          </div>
+
+          <form id="upload-form" class="upload-form">
+            <label for="document">Document</label>
+            <input id="document" name="document" type="file" accept=".pdf,.txt,application/pdf,text/plain" required />
+            <button type="submit">Upload and index</button>
+          </form>
+
+          <div class="status-block">
+            <span class="label">Status</span>
+            <p id="status">Upload a PDF or text file to begin.</p>
+          </div>
+        </aside>
+
+        <section class="chat-panel">
+          <div id="messages" class="messages">
+            <div class="message assistant">
+              <p>Ask a question after uploading a document. Answers will be grounded in retrieved chunks from that file.</p>
+            </div>
+          </div>
+
+          <form id="chat-form" class="chat-form">
+            <input
+              id="question"
+              type="text"
+              placeholder="Ask something from the uploaded document..."
+              autocomplete="off"
+              disabled
+              required
+            />
+            <button id="ask-button" type="submit" disabled>Ask</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
