@@ -23,7 +23,10 @@ function addMessage(role, content, sources = []) {
     const sourceBlock = document.createElement("div");
     sourceBlock.className = "sources";
     sourceBlock.textContent = sources
-      .map((source) => `Source ${source.source}${source.chunk ? `, chunk ${source.chunk}` : ""}: ${source.preview}`)
+      .map(
+        (source) =>
+          `Source ${source.source}${source.filename ? ` | ${source.filename}` : ""}${source.chunk ? `, chunk ${source.chunk}` : ""}: ${source.preview}`
+      )
       .join("\n\n");
     message.append(sourceBlock);
   }

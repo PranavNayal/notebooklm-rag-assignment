@@ -132,8 +132,49 @@ async function embedTexts(texts) {
 
 function formatContext(points) {
   return points
-    .map((point, index) => `Source ${index + 1} | chunk: ${point.payload.chunkIndex + 1}\n${point.payload.text}`)
+    .map(
+      (point, index) =>
+        `Source ${index + 1} | file: ${point.payload.filename} | chunk: ${point.payload.chunkIndex + 1}\n${point.payload.text}`
+    )
     .join("\n\n---\n\n");
+}
+
+async function generateGroundedAnswer(question, context) {
+  const completion = await openai.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: 0.0,
+    messages: [
+      {
+        role: "system",
+        content: `You are a document question-answering assistant. Answer only from the provided context. Do not use outside knowledge or make guesses. If the context does not contain the answer, reply exactly: I could not find that in the uploaded document.`
+      },
+      {
+        role: "user",
+        content: `Context:\n${context}\n\nQuestion: ${question}`
+      }
+    ]
+  });
+
+  return completion.choices[0]?.message?.content?.trim() || "I could not find that in the uploaded document.";
+}
+
+async function verifyAndCorrectAnswer(question, answer, context) {
+  const completion = await openai.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: 0.0,
+    messages: [
+      {
+        role: "system",
+        content: `You are a factual verifier. Compare the answer to the context. Use only the context text. If the answer is fully supported by the context, return the same answer. If any part is unsupported, rewrite the answer using only supported context, or reply exactly: I could not find that in the uploaded document.`
+      },
+      {
+        role: "user",
+        content: `Context:\n${context}\n\nQuestion: ${question}\n\nCandidate answer: ${answer}`
+      }
+    ]
+  });
+
+  return completion.choices[0]?.message?.content?.trim() || "I could not find that in the uploaded document.";
 }
 
 app.get("/api/health", (_req, res) => {
@@ -238,32 +279,14 @@ app.post("/api/chat", async (req, res, next) => {
     });
     const context = formatContext(retrievedPoints);
 
-    const completion = await openai.chat.completions.create({
-      model: CHAT_MODEL,
-      temperature: 0.1,
-      messages: [
-        {
-          role: "system",
-          content: `You are a document question-answering assistant.
-Answer only from the provided context.
-Do not use outside knowledge or make guesses.
-If the context does not contain the answer, say: "I could not find that in the uploaded document."
-When useful, mention the source number or page from the context.
-
-Context:
-${context}`
-        },
-        {
-          role: "user",
-          content: question
-        }
-      ]
-    });
+    const groundedAnswer = await generateGroundedAnswer(question, context);
+    const finalAnswer = await verifyAndCorrectAnswer(question, groundedAnswer, context);
 
     res.json({
-      answer: completion.choices[0]?.message?.content || "No answer generated.",
+      answer: finalAnswer,
       sources: retrievedPoints.map((point, index) => ({
         source: index + 1,
+        filename: point.payload.filename,
         chunk: point.payload.chunkIndex + 1,
         score: point.score,
         preview: point.payload.text.slice(0, 280)
